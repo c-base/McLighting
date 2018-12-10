@@ -885,6 +885,26 @@ void setup() {
     #endif
   });
 
+  server.on("/set_segment", []() {
+    getArgs();
+    mode = SET_SEGMENT;
+    getStatusJSON();
+
+    #ifdef ENABLE_MQTT
+    mqtt_client.publish(mqtt_outtopic, String(String("OK /") + String(ws2812fx_mode)).c_str());
+    #endif
+    #ifdef ENABLE_AMQTT
+    amqttClient.publish(mqtt_outtopic.c_str(), qospub, false, String(String("OK /") + String(ws2812fx_mode)).c_str());
+    #endif
+    #ifdef ENABLE_HOMEASSISTANT
+      stateOn = true;
+      if(!ha_send_data.active())  ha_send_data.once(5, tickerSendState);
+    #endif
+    #ifdef ENABLE_STATE_SAVE_SPIFFS
+      if(!spiffs_save_state.active()) spiffs_save_state.once(3, tickerSpiffsSaveState);
+    #endif
+  });
+  
   #ifdef HTTP_OTA
     httpUpdater.setup(&server, "/update");
   #endif
@@ -958,6 +978,13 @@ void loop() {
     strip.trigger();
     prevmode = SET_MODE;
     mode = SETCOLOR;
+  }
+  if (mode == SET_SEGMENT) {
+    DBG_OUTPUT_PORT.printf("SET_SEGMENT: %d %d %d %d %d\n", current_segment, segment_start, segment_stop, ws2812fx_mode, mode);
+    strip.setSegment(current_segment, segment_start, segment_stop, ws2812fx_mode, segment_rgb, convertSpeed(ws2812fx_speed), false);
+    strip.trigger();
+    prevmode = SET_SEGMENT;
+    mode = HOLD;
   }
   if (mode == OFF) {
     if(strip.isRunning()) strip.stop(); //should clear memory

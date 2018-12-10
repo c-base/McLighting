@@ -4,6 +4,7 @@
 // Neopixel
 #define PIN 14           // PIN (14 / D5) where neopixel / WS2811 strip is attached
 #define NUMLEDS 24       // Number of leds in the strip
+#define NUMSEGMENTS 2
 #define BUILTIN_LED 2    // ESP-12F has the built in LED on GPIO2, see https://github.com/esp8266/Arduino/issues/2192
 #define BUTTON 4         // Input pin (4 / D2) for switching the LED strip on / off, connect this PIN to ground to trigger button.
 
@@ -17,6 +18,7 @@ const char HOSTNAME[] = "McLighting01";   // Friedly hostname
 #define ENABLE_BUTTON        // If defined, enable button handling code, see: https://github.com/toblum/McLighting/wiki/Button-control
 //#define MQTT_HOME_ASSISTANT_SUPPORT // If defined, use AMQTT and select Tools -> IwIP Variant -> Higher Bandwidth
 #define ENABLE_LEGACY_ANIMATIONS
+#define ENABLE_SAVE_SEGMENT_STATE_SPIFFS
 
 //#define WIFIMGR_PORTAL_TIMEOUT 180
 //#define WIFIMGR_SET_MANUAL_IP
@@ -100,11 +102,11 @@ uint32_t autoParams[][4] = { // color, speed, mode, duration (seconds)
 
 // List of all color modes
 #ifdef ENABLE_LEGACY_ANIMATIONS
-  enum MODE { SET_MODE, HOLD, OFF, SETCOLOR, SETSPEED, BRIGHTNESS, WIPE, RAINBOW, RAINBOWCYCLE, THEATERCHASE, TWINKLERANDOM, THEATERCHASERAINBOW, TV, CUSTOM };
+  enum MODE { SET_MODE, HOLD, OFF, SETCOLOR, SETSPEED, BRIGHTNESS, WIPE, RAINBOW, RAINBOWCYCLE, THEATERCHASE, TWINKLERANDOM, THEATERCHASERAINBOW, TV, CUSTOM, SET_SEGMENT };
   MODE mode = RAINBOW;         // Standard mode that is active when software starts
   bool exit_func = false;      // Global helper variable to get out of the color modes when mode changes
 #else
-  enum MODE { SET_MODE, HOLD, OFF, SETCOLOR, SETSPEED, BRIGHTNESS, CUSTOM };
+  enum MODE { SET_MODE, HOLD, OFF, SETCOLOR, SETSPEED, BRIGHTNESS, CUSTOM, SET_SEGMENT };
   MODE mode = SET_MODE;        // Standard mode that is active when software starts
 #endif
 
@@ -114,6 +116,12 @@ int ws2812fx_speed = 196;   // Global variable for storing the delay between col
 int brightness = 196;       // Global variable for storing the brightness (255 == 100%)
 
 int ws2812fx_mode = 0;      // Helper variable to set WS2812FX modes
+
+int num_segments = NUMSEGMENTS;
+int current_segment = 0;
+int segment_start = 0;
+int segment_stop = 0;
+uint32_t segment_rgb = 0xFF0000;
 
 bool shouldSaveConfig = false;  // For WiFiManger custom config
 

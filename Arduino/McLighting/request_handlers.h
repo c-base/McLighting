@@ -13,8 +13,20 @@ void tickerSpiffsSaveState(){
 #endif
 
 void getArgs() {
+  
+  if (server.arg("seg") != "") {
+    current_segment = server.arg("seg").toInt();
+  }
+  if (server.arg("start") != "") {
+    segment_start = constrain(server.arg("start").toInt(), 0, NUMLEDS);
+  }
+  if (server.arg("stop") != "") {
+    segment_stop = constrain(server.arg("stop").toInt(), 0, NUMLEDS);
+  }
+  
   if (server.arg("rgb") != "") {
     uint32_t rgb = (uint32_t) strtol(server.arg("rgb").c_str(), NULL, 16);
+    segment_rgb = rgb;
     main_color.red = ((rgb >> 16) & 0xFF);
     main_color.green = ((rgb >> 8) & 0xFF);
     main_color.blue = ((rgb >> 0) & 0xFF);
@@ -1255,7 +1267,8 @@ bool writeStateFS(){
   updateFS = true;
   //save the strip state to FS JSON
   DBG_OUTPUT_PORT.print("Saving cfg: ");
-  DynamicJsonDocument jsonBuffer(JSON_OBJECT_SIZE(7));
+  const int capacity = JSON_OBJECT_SIZE(7) + JSON_ARRAY_SIZE(num_segments) + num_segments * JSON_OBJECT_SIZE(6);
+  DynamicJsonDocument jsonBuffer(capacity);
   JsonObject json = jsonBuffer.to<JsonObject>();
   json["mode"] = static_cast<int>(mode);
   json["strip_mode"] = (int) strip.getMode();
@@ -1264,6 +1277,24 @@ bool writeStateFS(){
   json["red"] = main_color.red;
   json["green"] = main_color.green;
   json["blue"] = main_color.blue;
+
+  #ifdef ENABLE_SAVE_SEGMENT_STATE_SPIFFS
+    JsonArray segments = json.createNestedArray("segments");
+    
+    for(uint8_t i=0; i < num_segments; i++) {
+      JsonObject segmentJson = segments.createNestedObject();
+    //  DynamicJsonDocument segmentJsonBuffer(JSON_OBJECT_SIZE(6));
+    //  JsonObject segmentJson = segmentJsonBuffer.to<JsonObject>();
+      WS2812FX::Segment* currentSegment = strip.getSegment(i);
+      segmentJson["start"] = currentSegment->start;
+      segmentJson["stop"] = currentSegment->stop;
+      segmentJson["mode"] = currentSegment->mode;
+      segmentJson["speed"] = currentSegment->speed;
+      segmentJson["options"] = currentSegment->options;
+      segmentJson["color"] = currentSegment->colors[0];
+      //serializeJson(segmentJson, DBG_OUTPUT_PORT);
+    }    
+  #endif
 
 //      SPIFFS.remove("/state.json") ? DBG_OUTPUT_PORT.println("removed file") : DBG_OUTPUT_PORT.println("failed removing file");
   File configFile = SPIFFS.open("/stripstate.json", "w");
@@ -1314,6 +1345,13 @@ bool readStateFS() {
         strip.setSpeed(convertSpeed(ws2812fx_speed));
         strip.setBrightness(brightness);
         strip.setColor(main_color.red, main_color.green, main_color.blue);
+        
+        #ifdef ENABLE_SAVE_SEGMENT_STATE_SPIFFS
+          JsonArray segments = json["segments"];
+          for(uint8_t i=0; i < num_segments; i++) {
+            strip.setSegment(i, (uint16_t) segments[i]["start"], (uint16_t) segments[i]["stop"], (uint8_t) segments[i]["mode"], (uint32_t) segments[i]["color"], (uint16_t) segments[i]["speed"], false);
+          }
+        #endif
         
         updateFS = false;
         return true;
