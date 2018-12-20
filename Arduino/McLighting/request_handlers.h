@@ -286,6 +286,10 @@ void handleSetWS2812FXMode(uint8_t * mypayload) {
   ws2812fx_mode = constrain(ws2812fx_mode_tmp, 0, strip.getModeCount() - 1);
 }
 
+void handleSetWS2812Segment(uint8_t * mypayload) {
+  
+}
+
 String listStatusJSON(void) {
   uint8_t tmp_mode = (mode == SET_MODE) ? (uint8_t) ws2812fx_mode : strip.getMode();
   
@@ -1267,8 +1271,7 @@ bool writeStateFS(){
   updateFS = true;
   //save the strip state to FS JSON
   DBG_OUTPUT_PORT.print("Saving cfg: ");
-  const int capacity = JSON_OBJECT_SIZE(7) + JSON_ARRAY_SIZE(num_segments) + num_segments * JSON_OBJECT_SIZE(6);
-  DynamicJsonDocument jsonBuffer(capacity);
+  DynamicJsonDocument jsonBuffer(JSON_OBJECT_SIZE(7) + JSON_ARRAY_SIZE(num_segments) + num_segments * JSON_OBJECT_SIZE(6));
   JsonObject json = jsonBuffer.to<JsonObject>();
   json["mode"] = static_cast<int>(mode);
   json["strip_mode"] = (int) strip.getMode();
@@ -1348,8 +1351,11 @@ bool readStateFS() {
         
         #ifdef ENABLE_SAVE_SEGMENT_STATE_SPIFFS
           JsonArray segments = json["segments"];
-          for(uint8_t i=0; i < num_segments; i++) {
-            strip.setSegment(i, (uint16_t) segments[i]["start"], (uint16_t) segments[i]["stop"], (uint8_t) segments[i]["mode"], (uint32_t) segments[i]["color"], (uint16_t) segments[i]["speed"], false);
+          
+          if (segments.size() > 0) {
+            for(uint8_t i=0; i < num_segments; i++) {
+              strip.setSegment(i, (uint16_t) segments[i]["start"], (uint16_t) segments[i]["stop"], (uint8_t) segments[i]["mode"], (uint32_t) segments[i]["color"], (uint16_t) segments[i]["speed"], false);
+            }
           }
         #endif
         

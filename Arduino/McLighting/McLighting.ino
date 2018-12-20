@@ -268,6 +268,11 @@ void setup() {
   #endif
   strip.setBrightness(brightness);
   strip.setSpeed(convertSpeed(ws2812fx_speed));
+  /*
+  strip.setSegment(0, 0, 2, FX_MODE_BLINK, 0xFF0000, 1000, false);
+  strip.setSegment(1, 3, 5, FX_MODE_SCAN, 0x00FF00, 1000, false);
+  strip.setSegment(2, 6, 11, FX_MODE_COMET, 0x0000FF, 1000, false);
+  */
   //strip.setMode(FX_MODE_RAINBOW_CYCLE);
   strip.setColor(main_color.red, main_color.green, main_color.blue);
   strip.start();
@@ -1075,7 +1080,7 @@ void loop() {
   #ifdef ENABLE_STATE_SAVE_EEPROM
     // Check for state changes
     sprintf(current_state, "STA|%2d|%3d|%3d|%3d|%3d|%3d|%3d", mode, strip.getMode(), ws2812fx_speed, brightness, main_color.red, main_color.green, main_color.blue);
-
+    
     if (strcmp(current_state, last_state) != 0) {
       // DBG_OUTPUT_PORT.printf("STATE CHANGED: %s / %s\n", last_state, current_state);
       strcpy(last_state, current_state);
